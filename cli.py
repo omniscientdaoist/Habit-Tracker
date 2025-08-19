@@ -74,10 +74,10 @@ def main():
                 print(format_habit_line(i, h))
 
             user_input = input("Enter habit number: ").strip()
-            status = delete_habit(habits, user_input)
+            status, removed = delete_habit(habits, user_input)
 
             if status == "deleted":
-                print("✅ Habit deleted.")
+                print(f"✅ {removed['name']} habit deleted.")
                 save_habits(habits)
             elif status == "bad_index":
                 print("❌ Invalid number.")

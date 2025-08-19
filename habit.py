@@ -109,7 +109,7 @@ def format_dashboard_line(h: dict) -> str:
     return f"{badge} | {name} — streak {streak} | {when}"
 
 
-def delete_habit(habits: list[dict], index: str | int) -> str:
+def delete_habit(habits: list[dict], index: str | int) -> tuple[str, dict | None]:
     """
     Removes one habit (1-based index).
     Mutates `habits` in place.
@@ -123,8 +123,8 @@ def delete_habit(habits: list[dict], index: str | int) -> str:
     if idx < 0 or idx >= len(habits):
         return "bad_index"
 
-    habits.pop(idx)
-    return "deleted"
+    removed = habits.pop(idx)
+    return "deleted", removed
 
 
 
