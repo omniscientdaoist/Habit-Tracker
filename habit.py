@@ -107,3 +107,27 @@ def format_dashboard_line(h: dict) -> str:
         when = "last done yesterday"
 
     return f"{badge} | {name} — streak {streak} | {when}"
+
+
+def delete_habit(habits: list[dict], index: str | int) -> str:
+    """
+    Removes one habit (1-based index).
+    Mutates `habits` in place.
+    Returns: 'deleted', 'bad_index', or 'invalid_input'.
+    """
+    try:
+        idx = int(index) - 1
+    except ValueError:
+        return "invalid_input"
+
+    if idx < 0 or idx >= len(habits):
+        return "bad_index"
+
+    habits.pop(idx)
+    return "deleted"
+
+
+
+    
+
+        

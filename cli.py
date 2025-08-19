@@ -1,6 +1,7 @@
 from habit import (
     add_habit, mark_habit_done,
-    get_dashboard, format_dashboard_line, format_habit_line
+    get_dashboard, format_dashboard_line, format_habit_line,
+    delete_habit
 )
 from save import load_habits, save_habits
 
@@ -13,8 +14,9 @@ def main():
         print("2) List habits")
         print("3) Mark habit as done")
         print("4) Dashboard")
-        print("5) Exit")
-        choice = input("Choose (1-5): ").strip()
+        print("5) Delete habit")
+        print("6) Exit")
+        choice = input("Choose (1-6): ").strip()
 
         if choice == "1":
             name = input("Habit name: ").strip()
@@ -62,8 +64,30 @@ def main():
             print("\n=== Dashboard ===")
             for row in computed:
                 print(format_dashboard_line(row))
-
+        
         elif choice == "5":
+            if not habits:
+                print("No habits yet.")
+                continue
+
+            for i, h in enumerate(habits, 1):
+                print(format_habit_line(i, h))
+
+            user_input = input("Enter habit number: ").strip()
+            status = delete_habit(habits, user_input)
+
+            if status == "deleted":
+                print("✅ Habit deleted.")
+                save_habits(habits)
+            elif status == "bad_index":
+                print("❌ Invalid number.")
+            elif status == "invalid_input":
+                print("❌ Invalid input.")
+            else:
+                # fallback, shouldn't happen
+                print("❌ Unknown error.")
+
+        elif choice == "6":
             print("👋 Goodbye.")
             break
 
