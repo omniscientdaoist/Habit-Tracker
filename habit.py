@@ -129,9 +129,29 @@ def delete_habit(habits: list[dict], index: str | int) -> tuple[str, dict | None
 
 def edit_habit(habits: list[dict], index: str | int, name: str, streak: int | str, date: str) -> str:
     """
-    Edits one habit (1-based index).
-    Mutates `habits` in place.
-    Returns: 'nothing', edited'.
+    Edit fields of a single habit.
+
+    Args:
+        habits (list[dict]): The list of habit dictionaries to update.
+        index (int): Zero-based index of the habit to edit (validated in the menu).
+        name (str): New name for the habit, or empty string "" to skip.
+        streak (str): New streak value as a string (will be cast to int), or "" to skip.
+        date (str): New date string in format "DD-MM-YYYY", or "" to skip.
+
+    Behavior:
+        - Only updates fields if corresponding inputs are non-empty.
+        - Validates `streak` to ensure it is an integer ≥ 0.
+        - Validates `date` format using datetime.strptime.
+
+    Returns:
+        str: One of the following status codes:
+            - "edited": At least one field was successfully updated.
+            - "nothing": No changes were requested (all inputs blank).
+            - "invalid_streak": Provided streak was not a valid non-negative integer.
+            - "invalid_date": Provided date was not in the correct format.
+
+    Side Effects:
+        Mutates the `habits` list in place by updating the selected habit.
     """
 
     if not name and not streak and not date:
@@ -146,11 +166,11 @@ def edit_habit(habits: list[dict], index: str | int, name: str, streak: int | st
         try:
             valid_streak = int(streak)
         except ValueError:
-            print("❌ Invalid input.")
+            return "invalid_streak"
         if valid_streak >= 0:
-            habit["streak"] = streak
+            habit["streak"] = valid_streak
         else:
-            print("❌ Invalid input.")
+            return "invalid_streak"
 
     if date:
         try:

@@ -124,6 +124,13 @@ def main():
                 save_habits(habits)
             elif status == "nothing":
                 print("❌ No changes have been made.")
+            elif status == "invalid_streak":
+                print("❌ Invalid Streak.")
+            elif status == "invalid_date":
+                print("❌ Invalid Date.")
+            else:
+                print("❌ Invalid Input.")
+            
 
 
         elif choice == "7":
