@@ -85,7 +85,7 @@ def format_habit_line(index: int, habit: dict) -> str:
     name = habit.get("name", "Untitled")
     streak = habit.get("streak", 0)
     last_done = habit.get("last_done") or "Never"
-    return f"{index}. {name} — streak {streak}, last done {last_done}"
+    return f"{index}. {name} — Streak {streak}, Last done {last_done}"
 
 def format_dashboard_line(h: dict) -> str:
     """For the dashboard computed view."""
@@ -125,6 +125,41 @@ def delete_habit(habits: list[dict], index: str | int) -> tuple[str, dict | None
 
     removed = habits.pop(idx)
     return "deleted", removed
+
+
+def edit_habit(habits: list[dict], index: str | int, name: str, streak: int | str, date: str) -> str:
+    """
+    Edits one habit (1-based index).
+    Mutates `habits` in place.
+    Returns: 'nothing', edited'.
+    """
+
+    if not name and not streak and not date:
+        return "nothing"
+    
+    habit = habits[index]
+
+    if name:
+        habit["name"] = name
+    
+    if streak:
+        try:
+            valid_streak = int(streak)
+        except ValueError:
+            print("❌ Invalid input.")
+        if valid_streak >= 0:
+            habit["streak"] = streak
+        else:
+            print("❌ Invalid input.")
+
+    if date:
+        try:
+            valid_date = datetime.strptime(date, "%d-%m-%Y").date()
+            habit["last_done"] = valid_date.strftime("%d-%m-%Y")
+        except ValueError:
+            return "invalid_date"
+    
+    return "edited" 
 
 
 
