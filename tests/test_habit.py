@@ -1,5 +1,5 @@
 import pytest
-from habit import add_habit, mark_habit_done, delete_habit
+from habit import add_habit, mark_habit_done, delete_habit, edit_habit, get_dashboard
 
 def test_add_habit():
     h = add_habit("pray")
@@ -21,3 +21,20 @@ def test_delete_habit():
     assert removed["name"] == "pray"
     assert len(habits) == 1
     assert habits[0]["name"] == "read"
+
+def test_edit_habit():
+    habits = [add_habit("kill"), add_habit("bot")]
+    status = edit_habit(habits, 1, "Kill", 2, "20-08-2025")
+    assert status == "edited"
+
+def test_get_dashboard():
+    habits = [add_habit("kill"), add_habit("bot")]
+    status = get_dashboard(habits)
+    # Check the order of names
+    assert [h["name"] for h in status] == ["kill", "bot"]
+
+    # Check that both are "new" habits
+    for h in status:
+        assert h["streak"] == 0
+        assert h["days_since"] is None
+        assert h["stale"] is False
