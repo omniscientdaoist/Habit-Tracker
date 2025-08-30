@@ -1,9 +1,14 @@
-from habit import (
-    add_habit, mark_habit_done,
-    get_dashboard, format_dashboard_line, format_habit_line,
-    delete_habit, edit_habit
+from habit_tracker.habit import (
+    add_habit,
+    mark_habit_done,
+    get_dashboard,
+    format_dashboard_line,
+    format_habit_line,
+    delete_habit,
+    edit_habit,
 )
 from save import load_habits, save_habits
+
 
 def main():
     habits = load_habits()
@@ -65,7 +70,7 @@ def main():
             print("\n=== Dashboard ===")
             for row in computed:
                 print(format_dashboard_line(row))
-        
+
         elif choice == "5":
             if not habits:
                 print("No habits yet.")
@@ -88,8 +93,7 @@ def main():
                 # fallback, shouldn't happen
                 print("❌ Unknown error.")
 
-
-        elif choice == "6":  
+        elif choice == "6":
             if not habits:
                 print("No habits yet.")
                 continue
@@ -114,9 +118,9 @@ def main():
             new_name = input("Enter new name or leave blank to skip: ").strip()
 
             new_streak = input("Enter new streak or leave blank to skip: ").strip()
-            
+
             new_date = input("Enter new date e.g. 21-08-2025 (or leave blank to skip): ").strip()
-            
+
             status = edit_habit(habits, idx, new_name, new_streak, new_date)
 
             if status == "edited":
@@ -130,8 +134,6 @@ def main():
                 print("❌ Invalid Date.")
             else:
                 print("❌ Invalid Input.")
-            
-
 
         elif choice == "7":
             print("👋 Goodbye.")
@@ -139,6 +141,7 @@ def main():
 
         else:
             print("❌ Invalid option.")
+
 
 if __name__ == "__main__":
     main()

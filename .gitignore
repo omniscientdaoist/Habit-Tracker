@@ -1,6 +1,9 @@
 # Python
+.venv/
 __pycache__/
 *.pyc
+.coverage
+.pytest_cache/
 *.pyo
 *.pyd
 .env
