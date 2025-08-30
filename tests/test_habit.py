@@ -1,5 +1,4 @@
-import pytest
-from habit_tracker.habit import add_habit, mark_habit_done, delete_habit, edit_habit, get_dashboard
+from habit_tracker.habit import add_habit, delete_habit, edit_habit, get_dashboard, mark_habit_done
 
 
 def test_add_habit():

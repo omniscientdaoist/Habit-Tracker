@@ -3,7 +3,7 @@ import json
 
 def load_habits(filename="habits.json"):
     try:
-        with open(filename, "r", encoding="utf-8") as f:
+        with open(filename, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         return []  # no file yet: start fresh

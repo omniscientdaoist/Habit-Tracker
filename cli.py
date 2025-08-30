@@ -1,11 +1,11 @@
 from habit_tracker.habit import (
     add_habit,
-    mark_habit_done,
-    get_dashboard,
-    format_dashboard_line,
-    format_habit_line,
     delete_habit,
     edit_habit,
+    format_dashboard_line,
+    format_habit_line,
+    get_dashboard,
+    mark_habit_done,
 )
 from save import load_habits, save_habits
 
@@ -124,7 +124,7 @@ def main():
             status = edit_habit(habits, idx, new_name, new_streak, new_date)
 
             if status == "edited":
-                print(f"✏️ Habit edited.")
+                print("✏️ Habit edited.")
                 save_habits(habits)
             elif status == "nothing":
                 print("❌ No changes have been made.")
