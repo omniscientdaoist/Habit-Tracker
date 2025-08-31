@@ -184,7 +184,7 @@ class HabitTracker:
 
         def sort_key(row):
             # stale first (True sorts before False if we invert),
-            # then larger days_since, 
+            # then larger days_since,
             # then larger streak
             days = row["days_since"] if row["days_since"] is not None else -1
             return (not row["stale"], -days, -row["streak"])
