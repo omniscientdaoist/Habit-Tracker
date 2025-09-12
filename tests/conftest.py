@@ -1,6 +1,8 @@
 # tests/conftest.py
 import pytest
+
 from habit_tracker.habit import HabitTracker
+
 
 @pytest.fixture()
 def tracker(tmp_path):

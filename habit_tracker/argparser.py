@@ -276,7 +276,8 @@ def build_parser():
     sp_hist = sub.add_parser("history", help="Show completion history (relative labels)")
     sp_hist.add_argument("index", type=int, help="Habit number (1-based)")
     sp_hist.add_argument("--limit", type=int, help="Limit on history")
-    sp_hist.add_argument("--oldest", action="store_true", help="Show oldest first instead of newest first")
+    sp_hist.add_argument("--oldest", action="store_true", 
+                         help="Show oldest first instead of newest first")
     sp_hist.set_defaults(func=cmd_history)
 
     sp_add_date = sub.add_parser("add-date", help="Add new date to a habit.")
@@ -291,7 +292,8 @@ def build_parser():
 
     sp_stats = sub.add_parser("stats", help="Show analytics for last N days")
     sp_stats.add_argument("--days", type=int, default=30, help="Window size (default 30)")
-    sp_stats.add_argument("--chart", action="store_true", help="Show ASCII chart of per-day totals")
+    sp_stats.add_argument("--chart", action="store_true", 
+                          help="Show ASCII chart of per-day totals")
     sp_stats.set_defaults(func=cmd_stats)
 
     return p
@@ -301,7 +303,9 @@ def configure_logging(verbosity: int, quiet: bool):
     if quiet:
         level = logging.ERROR
     else:
-        level = logging.WARNING if verbosity == 0 else (logging.INFO if verbosity == 1 else logging.DEBUG)
+        level = logging.WARNING if verbosity == 0 else (
+            logging.INFO if verbosity == 1 else logging.DEBUG
+            )
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
 
 

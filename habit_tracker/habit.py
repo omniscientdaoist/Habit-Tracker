@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Optional
 
 from habit_tracker.repo import HabitRepo  # <-- use the repo
 
@@ -128,7 +127,14 @@ class HabitTracker:
         if not changed:
             return "nothing"
 
-        self.repo.update(h["id"], name=new_name, streak=new_streak, last_done=new_last_done)
+        self.repo.update(
+
+            h["id"], 
+            name=new_name, 
+            streak=new_streak, 
+            last_done=new_last_done
+
+            )
         return "edited"
 
     def done(self, index_1based: int) -> str:
@@ -160,7 +166,10 @@ class HabitTracker:
         last = max(datetime.strptime(d, DateFmt).date() for d in dates)
         return (_today() - last).days
 
-    def _compute_streak_from_completions(self, dates: set[str], today_str: str, yesterday_str: str) -> int:
+    def _compute_streak_from_completions(self, 
+                                         dates: set[str], 
+                                         today_str: str, 
+                                         yesterday_str: str) -> int:
         # start at today if present, else yesterday if present, else 0
         if today_str in dates:
             start = today_str
@@ -240,7 +249,10 @@ class HabitTracker:
         # future date guard (shouldn't normally happen)
         return f"in {-delta} days"
 
-    def history(self, index: int, limit: int | None = None, newest_first: bool = True) -> list[dict] | str:
+    def history(self, 
+                index: int, 
+                limit: int | None = None, 
+                newest_first: bool = True) -> list[dict] | str:
         """
         Return a list of completions with relative labels for a habit:
         [{ "done_on": "21-08-2025", "label": "yesterday" }, ...]
