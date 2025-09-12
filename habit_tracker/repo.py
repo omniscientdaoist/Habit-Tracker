@@ -30,7 +30,7 @@ class HabitRepo:
             self.conn.execute("PRAGMA journal_mode = WAL;")
             self.conn.execute("PRAGMA synchronous = NORMAL;")
             self.conn.executescript(
-               """
+                """
                CREATE TABLE IF NOT EXISTS habits (
                  id        INTEGER PRIMARY KEY AUTOINCREMENT,
                  name      TEXT    NOT NULL,
@@ -48,17 +48,13 @@ class HabitRepo:
                CREATE INDEX IF NOT EXISTS idx_completions_habit
                 ON completions(habit_id, done_on);
                """
-          )
-                
-
+            )
 
     # ---------- CRUD methods ----------
 
     def fetch_all(self) -> list[dict]:
         """Return all habits as a list of dicts (ordered by id)."""
-        cur = self.conn.execute(
-            "SELECT id, name, streak, last_done FROM habits ORDER BY id ASC;"
-        )
+        cur = self.conn.execute("SELECT id, name, streak, last_done FROM habits ORDER BY id ASC;")
         return [dict(row) for row in cur.fetchall()]
 
     def insert(self, name: str, streak: int = 0, last_done: str | None = None) -> int:
@@ -125,7 +121,7 @@ class HabitRepo:
                 "INSERT OR IGNORE INTO completions (habit_id, done_on) VALUES (?, ?);",
                 (habit_id, done_on),
             )
-    
+
     def fetch_completions(self, habit_id: int) -> list[dict]:
         cur = self.conn.execute(
             "SELECT done_on FROM completions WHERE habit_id = ? ORDER BY done_on ASC;",
@@ -143,11 +139,11 @@ class HabitRepo:
     def delete_completion(self, habit_id: int, date_str: str) -> bool:
         with self.conn:
             cur = self.conn.execute(
-            "DELETE FROM completions WHERE habit_id = ? AND done_on = ?;",
-            (habit_id, date_str),
-        )
+                "DELETE FROM completions WHERE habit_id = ? AND done_on = ?;",
+                (habit_id, date_str),
+            )
         return cur.rowcount > 0
-    
+
     def fetch_completions_between(self, start_date: str, end_date: str) -> list[dict]:
         """
         Return rows of {habit_id, done_on} where start_date <= done_on <= end_date.

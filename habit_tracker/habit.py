@@ -8,11 +8,14 @@ from habit_tracker.repo import HabitRepo  # <-- use the repo
 
 DateFmt = "%d-%m-%Y"
 
+
 def _today():
     return datetime.today().date()
 
+
 def _today_str() -> str:
     return _today().strftime(DateFmt)
+
 
 def _yesterday_str() -> str:
     return (_today() - timedelta(days=1)).strftime(DateFmt)
@@ -40,7 +43,6 @@ class HabitTracker:
     def list(self) -> list[dict]:
         """Return all habits as a list of dicts (fresh from DB)."""
         return self.repo.fetch_all()
-
 
     def dashboard(self) -> list[dict]:
         rows = []
@@ -127,14 +129,7 @@ class HabitTracker:
         if not changed:
             return "nothing"
 
-        self.repo.update(
-
-            h["id"], 
-            name=new_name, 
-            streak=new_streak, 
-            last_done=new_last_done
-
-            )
+        self.repo.update(h["id"], name=new_name, streak=new_streak, last_done=new_last_done)
         return "edited"
 
     def done(self, index_1based: int) -> str:
@@ -166,10 +161,9 @@ class HabitTracker:
         last = max(datetime.strptime(d, DateFmt).date() for d in dates)
         return (_today() - last).days
 
-    def _compute_streak_from_completions(self, 
-                                         dates: set[str], 
-                                         today_str: str, 
-                                         yesterday_str: str) -> int:
+    def _compute_streak_from_completions(
+        self, dates: set[str], today_str: str, yesterday_str: str
+    ) -> int:
         # start at today if present, else yesterday if present, else 0
         if today_str in dates:
             start = today_str
@@ -197,7 +191,6 @@ class HabitTracker:
         if not dates:
             return 0
 
-
         def prev(dstr: str) -> str:
             d = datetime.strptime(dstr, DateFmt).date()
             return (d - timedelta(days=1)).strftime(DateFmt)
@@ -221,7 +214,6 @@ class HabitTracker:
                     longest = length
         return longest
 
-    
     def unmark(self, index: int) -> str:
         habits = self.list()
         idx = index - 1
@@ -233,7 +225,7 @@ class HabitTracker:
 
         if self.repo.delete_completion(h["id"], today_str):
             return "removed_today"
-        
+
         return "nothing_to_remove"
 
     def _label_relative(self, date_str: str) -> str:
@@ -249,10 +241,9 @@ class HabitTracker:
         # future date guard (shouldn't normally happen)
         return f"in {-delta} days"
 
-    def history(self, 
-                index: int, 
-                limit: int | None = None, 
-                newest_first: bool = True) -> list[dict] | str:
+    def history(
+        self, index: int, limit: int | None = None, newest_first: bool = True
+    ) -> list[dict] | str:
         """
         Return a list of completions with relative labels for a habit:
         [{ "done_on": "21-08-2025", "label": "yesterday" }, ...]
@@ -269,7 +260,7 @@ class HabitTracker:
 
         if not rows:
             return []
-        
+
         if newest_first:
             rows = list(reversed(rows))
 
@@ -289,12 +280,12 @@ class HabitTracker:
         idx = index - 1
         if idx < 0 or idx >= len(habits):
             return "bad_index"
-        
+
         try:
             date = datetime.strptime(date_str, DateFmt).date()
         except ValueError:
             return "invalid_date"
-        
+
         delta = (_today() - date).days
         if delta < 0:
             return "future_date"
@@ -303,10 +294,9 @@ class HabitTracker:
         habit_id = habit["id"]
         if self.repo.has_completion_on(habit_id, date_str):
             return "already"
-        
+
         self.repo.add_completion(habit_id, date_str)
         return "added"
-    
 
     def uncomplete_on(self, index: int, date_str: str) -> str:
         """
@@ -334,7 +324,6 @@ class HabitTracker:
         # One-step delete; rowcount tells us if anything was removed
         removed = self.repo.delete_completion(habit_id, date_str)
         return "removed" if removed else "nothing_to_remove"
-    
 
     def stats(self, days: int = 30) -> dict:
         """
@@ -392,4 +381,3 @@ class HabitTracker:
             "current_streak": current_streak,
             "longest_streak": longest_streak,
         }
-

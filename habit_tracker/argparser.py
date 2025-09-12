@@ -68,6 +68,7 @@ def cmd_done(args):
     else:
         print("❌ Unknown error.")
 
+
 def cmd_unmark(args):
     ht = HabitTracker(args.data)
     status = ht.unmark(args.index)  # 1-based index
@@ -79,6 +80,7 @@ def cmd_unmark(args):
         print("❌ Invalid number.")
     else:
         print("❌ Unknown error.")
+
 
 def cmd_delete(args):
     ht = HabitTracker(args.data)
@@ -127,6 +129,7 @@ def cmd_dashboard(args):
     for row in rows:
         print(format_dashboard_line(row))
 
+
 def cmd_history(args):
     ht = HabitTracker(args.data)  # or HabitTracker() if you default the path
     rows = ht.history(args.index, args.limit, not args.oldest)  # 1-based index
@@ -144,6 +147,7 @@ def cmd_history(args):
     for r in rows:
         # e.g. "03-09-2025  (today)" or "01-09-2025  (2d ago)"
         print(f"- {r['done_on']}  ({r['label']})")
+
 
 def cmd_add_date(args):
     ht = HabitTracker(args.data)  # if your tracker takes a db path; else HabitTracker()
@@ -178,6 +182,7 @@ def cmd_remove_date(args):
     else:
         print("❌ Unknown error.")
 
+
 def cmd_stats(args):
     ht = HabitTracker(args.data)
     report = ht.stats(days=args.days)
@@ -211,6 +216,7 @@ def cmd_stats(args):
         print("\nPer-day chart (ASCII):")
         print(render_bar_chart(report["per_day"], width=40))
 
+
 def render_bar_chart(per_day: dict[str, int], width: int = 40) -> str:
     """
     Render a left-to-right bar chart.
@@ -240,7 +246,6 @@ def build_parser():
 
     default_path = os.getenv("HABITS_PATH", "habits.db")
     p.add_argument("--data", default=default_path, help="Path to data file")
-
 
     sub = p.add_subparsers(dest="command", required=True)
 
@@ -276,8 +281,9 @@ def build_parser():
     sp_hist = sub.add_parser("history", help="Show completion history (relative labels)")
     sp_hist.add_argument("index", type=int, help="Habit number (1-based)")
     sp_hist.add_argument("--limit", type=int, help="Limit on history")
-    sp_hist.add_argument("--oldest", action="store_true", 
-                         help="Show oldest first instead of newest first")
+    sp_hist.add_argument(
+        "--oldest", action="store_true", help="Show oldest first instead of newest first"
+    )
     sp_hist.set_defaults(func=cmd_history)
 
     sp_add_date = sub.add_parser("add-date", help="Add new date to a habit.")
@@ -292,8 +298,7 @@ def build_parser():
 
     sp_stats = sub.add_parser("stats", help="Show analytics for last N days")
     sp_stats.add_argument("--days", type=int, default=30, help="Window size (default 30)")
-    sp_stats.add_argument("--chart", action="store_true", 
-                          help="Show ASCII chart of per-day totals")
+    sp_stats.add_argument("--chart", action="store_true", help="Show ASCII chart of per-day totals")
     sp_stats.set_defaults(func=cmd_stats)
 
     return p
@@ -303,9 +308,11 @@ def configure_logging(verbosity: int, quiet: bool):
     if quiet:
         level = logging.ERROR
     else:
-        level = logging.WARNING if verbosity == 0 else (
-            logging.INFO if verbosity == 1 else logging.DEBUG
-            )
+        level = (
+            logging.WARNING
+            if verbosity == 0
+            else (logging.INFO if verbosity == 1 else logging.DEBUG)
+        )
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
 
 

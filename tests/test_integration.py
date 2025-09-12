@@ -5,17 +5,21 @@ def test_add_list_delete(tracker):
     items = tracker.list()
     assert [h["name"] for h in items] == ["pray", "read"]
 
-    status, removed = tracker.delete(1)    # 1-based
+    status, removed = tracker.delete(1)  # 1-based
     assert status == "deleted"
     assert removed["name"] == "pray"
     assert [h["name"] for h in tracker.list()] == ["read"]
+
 
 def test_done_streaks(tracker, monkeypatch):
     # Fix “today” so test is deterministic
     from datetime import date, timedelta
 
     fixed_today = date(2025, 9, 12)
-    def fake_today(): return fixed_today
+
+    def fake_today():
+        return fixed_today
+
     monkeypatch.setattr("habit_tracker.habit._today", fake_today)
 
     tracker.add("gym")
@@ -30,8 +34,10 @@ def test_done_streaks(tracker, monkeypatch):
     assert row["streak"] == 2
     assert row["days_since"] == 0
 
+
 def test_stats_basic(tracker, monkeypatch):
     from datetime import date, timedelta
+
     fixed_today = date(2025, 9, 12)
     monkeypatch.setattr("habit_tracker.habit._today", lambda: fixed_today)
 
@@ -48,6 +54,6 @@ def test_stats_basic(tracker, monkeypatch):
     tracker.complete_on(1, d3)
 
     rep = tracker.stats(days=3)
-    assert rep["per_day"][d2] == 2      # two completions on d2
+    assert rep["per_day"][d2] == 2  # two completions on d2
     assert rep["per_habit"]["code"] == 3
     assert rep["current_streak"]["code"] == 3
