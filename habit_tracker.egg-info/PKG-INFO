@@ -4,6 +4,12 @@ Version: 0.1.0
 Summary: Simple habit tracker CLI (learning project)
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
 
 # Habit Tracker (CLI)
 

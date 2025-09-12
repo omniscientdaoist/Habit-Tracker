@@ -1,14 +1,22 @@
+# habit_tracker/habit_tracker.py
 from __future__ import annotations
 
-import builtins
-import json
+from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import Optional
+
+from habit_tracker.repo import HabitRepo  # <-- use the repo
 
 DateFmt = "%d-%m-%Y"
 
-
 def _today():
     return datetime.today().date()
+
+def _today_str() -> str:
+    return _today().strftime(DateFmt)
+
+def _yesterday_str() -> str:
+    return (_today() - timedelta(days=1)).strftime(DateFmt)
 
 
 def _parse_date(s: str) -> datetime.date | None:
@@ -20,76 +28,81 @@ def _parse_date(s: str) -> datetime.date | None:
 
 class HabitTracker:
     """
-    Minimal class-based Habit Tracker.
-    - Holds habits in memory (self.habits).
-    - Persists to a JSON file (self.path).
-    - Methods return status strings so the CLI can decide what to print.
-
-    Habit shape (dict):
-        {
-            "name": str,
-            "streak": int,
-            "last_done": Optional[str],  # "DD-MM-YYYY" or None
-        }
+    Class now backed by SQLite via HabitRepo.
+    Public methods/return statuses unchanged.
     """
 
-    def __init__(self, path: str = "habits.json"):
-        self.path = path
-        self.habits: list[dict] = []
-        self.load()
+    def __init__(self, path: str = "habits.db"):
+        # 'path' is the DB file now (e.g., habits.db)
+        self.repo = HabitRepo(path)
 
-    def load(self) -> None:
-        """Load habits from self.path into self.habits."""
-        try:
-            with open(self.path, encoding="utf-8") as f:
-                data = json.load(f)
-                self.habits = data if isinstance(data, list) else []
-        except FileNotFoundError:
-            self.habits = []
-        except json.JSONDecodeError:
-            self.habits = []
+    # ---------- Queries / reads ----------
 
-    def save(self) -> None:
-        """Save self.habits into self.path."""
-        with open(self.path, "w", encoding="utf-8") as f:
-            json.dump(self.habits, f, indent=4)
+    def list(self) -> list[dict]:
+        """Return all habits as a list of dicts (fresh from DB)."""
+        return self.repo.fetch_all()
+
+
+    def dashboard(self) -> list[dict]:
+        rows = []
+        today_s = _today_str()
+        yday_s = _yesterday_str()
+        for h in self.list():
+            # pull completion dates for this habit and put into a set of 'DD-MM-YYYY'
+            comps = {row["done_on"] for row in self.repo.fetch_completions(h["id"])}
+            ds = self._days_since_from_dates(comps)
+            stale = (ds is not None) and (ds >= 2)
+            streak = self._compute_streak_from_completions(comps, today_s, yday_s)
+            rows.append(
+                {
+                    "name": h.get("name", "Untitled"),
+                    "streak": streak,
+                    "days_since": ds,
+                    "stale": stale,
+                }
+            )
+
+        def sort_key(row):
+            # stale first, then by days_since desc, then streak desc
+            days = row["days_since"] if row["days_since"] is not None else -1
+            return (not row["stale"], -days, -row["streak"])
+
+        return sorted(rows, key=sort_key)
+
+    # ---------- Commands / writes ----------
 
     def add(self, name: str) -> str:
-        """Add a new habit. Returns 'added' or 'empty_name'."""
         name = (name or "").strip()
         if not name:
             return "empty_name"
-        self.habits.append({"name": name, "streak": 0, "last_done": None})
-        self.save()
+        self.repo.insert(name=name, streak=0, last_done=None)
         return "added"
 
     def delete(self, index_1based: int) -> tuple[str, dict | None]:
-        """
-        Delete a habit by 1-based index.
-        Returns ('deleted', removed_dict) or ('bad_index', None).
-        """
+        habits = self.list()
         idx = index_1based - 1
-        if idx < 0 or idx >= len(self.habits):
+        if idx < 0 or idx >= len(habits):
             return "bad_index", None
-        removed = self.habits.pop(idx)
-        self.save()
+        removed = habits[idx]
+        self.repo.delete(removed["id"])
         return "deleted", removed
 
-    def edit(self, index_1based: int, name: str = "", streak: int = "", date: str = "") -> str:
-        """
-        Edit fields. Returns: 'edited', 'nothing', 'invalid_streak', 'invalid_date', 'bad_index'
-        """
+    def edit(self, index_1based: int, name: str = "", streak: str = "", date: str = "") -> str:
+        habits = self.list()
         idx = index_1based - 1
-        if idx < 0 or idx >= len(self.habits):
+        if idx < 0 or idx >= len(habits):
             return "bad_index"
+        h = habits[idx]
 
-        habit = self.habits[idx]
         changed = False
+        new_name = None
+        new_streak = None
+        new_last_done = None
 
         if name:
-            new_name = name.strip()
-            if new_name != habit.get("name", ""):
-                habit["name"] = new_name
+            candidate = name.strip()
+            if candidate and candidate != h["name"]:
+                new_name = candidate
                 changed = True
 
         if streak != "":
@@ -99,94 +112,272 @@ class HabitTracker:
                 return "invalid_streak"
             if s < 0:
                 return "invalid_streak"
-            if s != habit.get("streak", 0):
-                habit["streak"] = s
+            if s != h["streak"]:
+                new_streak = s
                 changed = True
 
         if date:
             dt = _parse_date(date.strip())
             if not dt:
                 return "invalid_date"
-            new_date = dt.strftime(DateFmt)
-            if new_date != habit.get("last_done", None):
-                habit["last_done"] = new_date
+            candidate = dt.strftime(DateFmt)
+            if candidate != (h.get("last_done") or ""):
+                new_last_done = candidate
                 changed = True
 
-        if changed:
-            self.save()
-            return "edited"
+        if not changed:
+            return "nothing"
 
-        return "nothing"
+        self.repo.update(h["id"], name=new_name, streak=new_streak, last_done=new_last_done)
+        return "edited"
 
     def done(self, index_1based: int) -> str:
-        """
-        Mark a habit as done today.
-        Returns: 'already', 'incremented', 'reset_to_1', 'bad_index'
-        """
-
+        habits = self.list()
         idx = index_1based - 1
-
-        if idx < 0 or idx >= len(self.habits):
+        if idx < 0 or idx >= len(habits):
             return "bad_index"
 
-        habit = self.habits[idx]
-        today = _today()
-        yesterday = today - timedelta(days=1)
+        h = habits[idx]
+        today_str = _today_str()
+        yesterday_str = _yesterday_str()
 
-        last = habit.get("last_done")
-        last_date = _parse_date(last) if last else None
-
-        if last_date == today:
+        # already completed today?
+        if self.repo.has_completion_on(h["id"], today_str):
             return "already"
 
-        elif last_date == yesterday:
-            habit["streak"] = habit.get("streak", 0) + 1
-            habit["last_done"] = today.strftime(DateFmt)
-            self.save()
-            return "incremented"
+        # write today's completion (idempotent with INSERT OR IGNORE in repo)
+        self.repo.add_completion(h["id"], today_str)
 
+        # if we also have a completion yesterday → streak increments
+        if self.repo.has_completion_on(h["id"], yesterday_str):
+            return "incremented"
         else:
-            habit["streak"] = 1
-            habit["last_done"] = today.strftime(DateFmt)
-            self.save()
             return "reset_to_1"
 
-    def list(self) -> builtins.list[dict]:
-        """Return a copy of habits (so callers don’t mutate internal list by accident)."""
-        return list(self.habits)
-
-    def days_since(self, date_str: str | None) -> int | None:
-        if not date_str:
+    def _days_since_from_dates(self, dates: set[str]) -> int | None:
+        if not dates:
             return None
-        d = _parse_date(date_str)
-        if not d:
-            return None
-        return (_today() - d).days
+        last = max(datetime.strptime(d, DateFmt).date() for d in dates)
+        return (_today() - last).days
 
-    def dashboard(self) -> builtins.list[dict]:
+    def _compute_streak_from_completions(self, dates: set[str], today_str: str, yesterday_str: str) -> int:
+        # start at today if present, else yesterday if present, else 0
+        if today_str in dates:
+            start = today_str
+        elif yesterday_str in dates:
+            start = yesterday_str
+        else:
+            return 0
+
+        def prev(dstr: str) -> str:
+            d = datetime.strptime(dstr, DateFmt).date()
+            return (d - timedelta(days=1)).strftime(DateFmt)
+
+        streak = 0
+        cur = start
+        while cur in dates:
+            streak += 1
+            cur = prev(cur)
+        return streak
+
+    def _longest_streak_from_dates(self, dates: set[str]) -> int:
         """
-        Compute a dashboard list of dicts:
-            { name, streak, days_since, stale }
-        Sort order: stale first, then by days_since desc, then streak desc.
+        Longest run of consecutive days inside `dates` (strings DD-MM-YYYY).
+        O(n log n) via set lookups + local backtracking.
         """
-        rows = []
-        for h in self.habits:
-            ds = self.days_since(h.get("last_done"))
-            stale = (ds is not None) and (ds >= 2)
-            rows.append(
-                {
-                    "name": h.get("name", "Untitled"),
-                    "streak": h.get("streak", 0),
-                    "days_since": ds,
-                    "stale": stale,
-                }
-            )
+        if not dates:
+            return 0
 
-        def sort_key(row):
-            # stale first (True sorts before False if we invert),
-            # then larger days_since,
-            # then larger streak
-            days = row["days_since"] if row["days_since"] is not None else -1
-            return (not row["stale"], -days, -row["streak"])
 
-        return sorted(rows, key=sort_key)
+        def prev(dstr: str) -> str:
+            d = datetime.strptime(dstr, DateFmt).date()
+            return (d - timedelta(days=1)).strftime(DateFmt)
+
+        # Longest chain by only starting from “heads” (no previous day in set)
+        dates_set = set(dates)
+        longest = 0
+        for d in dates_set:
+            if prev(d) not in dates_set:  # start of a run
+                length = 1
+                cur = d
+                while True:
+                    nxt = datetime.strptime(cur, DateFmt).date() + timedelta(days=1)
+                    nxt_s = nxt.strftime(DateFmt)
+                    if nxt_s in dates_set:
+                        length += 1
+                        cur = nxt_s
+                    else:
+                        break
+                if length > longest:
+                    longest = length
+        return longest
+
+    
+    def unmark(self, index: int) -> str:
+        habits = self.list()
+        idx = index - 1
+        if idx < 0 or idx >= len(habits):
+            return "bad_index"
+
+        h = habits[idx]
+        today_str = _today_str()
+
+        if self.repo.delete_completion(h["id"], today_str):
+            return "removed_today"
+        
+        return "nothing_to_remove"
+
+    def _label_relative(self, date_str: str) -> str:
+        """Return 'today' / 'yesterday' / 'N days ago' (or 'in N days' if future)."""
+        d = datetime.strptime(date_str, DateFmt).date()
+        delta = (_today() - d).days
+        if delta == 0:
+            return "today"
+        if delta == 1:
+            return "yesterday"
+        if delta > 1:
+            return f"{delta} days ago"
+        # future date guard (shouldn't normally happen)
+        return f"in {-delta} days"
+
+    def history(self, index: int, limit: int | None = None, newest_first: bool = True) -> list[dict] | str:
+        """
+        Return a list of completions with relative labels for a habit:
+        [{ "done_on": "21-08-2025", "label": "yesterday" }, ...]
+        newest_first: reverse chronological order if True.
+        limit: cap results (e.g., last 10).
+        """
+        habits = self.list()
+        idx = index - 1
+        if idx < 0 or idx >= len(habits):
+            return "bad_index"
+
+        h = habits[idx]
+        rows = self.repo.fetch_completions(h["id"])  # [{ "done_on": "..."}, ...] ASC by date
+
+        if not rows:
+            return []
+        
+        if newest_first:
+            rows = list(reversed(rows))
+
+        if limit is not None:
+            rows = rows[:limit]
+
+        # attach relative label
+        out = []
+        for r in rows:
+            d = r["done_on"]
+            out.append({"done_on": d, "label": self._label_relative(d)})
+        return out
+
+    def complete_on(self, index: int, date_str: str) -> str:
+
+        habits = self.list()
+        idx = index - 1
+        if idx < 0 or idx >= len(habits):
+            return "bad_index"
+        
+        try:
+            date = datetime.strptime(date_str, DateFmt).date()
+        except ValueError:
+            return "invalid_date"
+        
+        delta = (_today() - date).days
+        if delta < 0:
+            return "future_date"
+
+        habit = habits[idx]
+        habit_id = habit["id"]
+        if self.repo.has_completion_on(habit_id, date_str):
+            return "already"
+        
+        self.repo.add_completion(habit_id, date_str)
+        return "added"
+    
+
+    def uncomplete_on(self, index: int, date_str: str) -> str:
+        """
+        Remove a completion for a given habit (1-based index) on a specific date (DD-MM-YYYY).
+
+        Returns one of:
+        - 'bad_index'          : index out of range
+        - 'invalid_date'       : date_str not parseable with DateFmt
+        - 'removed'            : deletion succeeded (a row was removed)
+        - 'nothing_to_remove'  : no completion existed for that day
+        """
+        habits = self.list()
+        idx = index - 1
+        if idx < 0 or idx >= len(habits):
+            return "bad_index"
+
+        # Validate the format (and guard typos)
+        try:
+            _ = datetime.strptime(date_str, DateFmt).date()
+        except ValueError:
+            return "invalid_date"
+
+        habit_id = habits[idx]["id"]
+
+        # One-step delete; rowcount tells us if anything was removed
+        removed = self.repo.delete_completion(habit_id, date_str)
+        return "removed" if removed else "nothing_to_remove"
+    
+
+    def stats(self, days: int = 30) -> dict:
+        """
+        Aggregate analytics for the last `days` ending at today (inclusive).
+        Returns dict:
+        {
+            "window": {"start": "DD-MM-YYYY", "end": "DD-MM-YYYY"},
+            "per_day": { "DD-MM-YYYY": int, ... },
+            "per_habit": { "Habit Name": int, ... },
+            "current_streak": { "Habit Name": int, ... },
+            "longest_streak": { "Habit Name": int, ... }
+        }
+        """
+        end_d = _today()
+        start_d = end_d - timedelta(days=days - 1)
+        start_s = start_d.strftime(DateFmt)
+        end_s = end_d.strftime(DateFmt)
+
+        # map habit_id -> name
+        habits = self.list()
+        id_to_name = {h["id"]: h["name"] for h in habits}
+
+        rows = self.repo.fetch_completions_between(start_s, end_s)
+
+        # per_day totals
+        per_day = defaultdict(int)
+        # per_habit totals (within window)
+        per_habit = defaultdict(int)
+        # group completions per habit to compute streaks
+        by_habit_dates = defaultdict(set)
+
+        for r in rows:
+            hid = r["habit_id"]
+            d = r["done_on"]
+            per_day[d] += 1
+            per_habit[id_to_name.get(hid, f"#{hid}")] += 1
+            by_habit_dates[hid].add(d)
+
+        # compute current + longest streak per habit from date sets
+        current_streak = {}
+        longest_streak = {}
+
+        today_s = end_s
+        yday_s = (end_d - timedelta(days=1)).strftime(DateFmt)
+
+        for hid, name in id_to_name.items():
+            dates = by_habit_dates.get(hid, set())
+            current_streak[name] = self._compute_streak_from_completions(dates, today_s, yday_s)
+            longest_streak[name] = self._longest_streak_from_dates(dates)
+
+        return {
+            "window": {"start": start_s, "end": end_s},
+            "per_day": dict(per_day),
+            "per_habit": dict(per_habit),
+            "current_streak": current_streak,
+            "longest_streak": longest_streak,
+        }
+
